@@ -16,6 +16,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -25,6 +26,12 @@ public class MainActivity extends AppCompatActivity {
 
     Camera mCamera;
     SurfaceView mSurfaceView;
+
+    public native long getGPUWorkItems();
+
+    static {
+        System.loadLibrary("opencl-blur");
+    }
 
     @Override
     protected void onResume() {
@@ -53,6 +60,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Button captureButton = findViewById(R.id.button_capture);
         mSurfaceView = findViewById(R.id.surface_view);
+
+        Toast.makeText(
+                getApplicationContext(),
+                String.valueOf(getGPUWorkItems()),
+                Toast.LENGTH_LONG
+        ).show();
 
         SurfaceHolder holder = mSurfaceView.getHolder();
         holder.addCallback(new MySurfaceHolderCallback());
@@ -114,5 +127,4 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "surfaceDestroyed");
         }
     }
-
 }
