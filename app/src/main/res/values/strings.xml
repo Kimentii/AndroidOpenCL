@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CameraResearch</string>
+    <string name="action_capture">Capture</string>
+</resources>
