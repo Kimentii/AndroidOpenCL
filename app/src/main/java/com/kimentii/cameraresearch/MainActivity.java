@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button captureButton = findViewById(R.id.button_capture);
+
         mSurfaceView = findViewById(R.id.surface_view);
 
         Toast.makeText(
@@ -73,26 +73,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "Can't get camera.");
         }
 
-        captureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mCamera.takePicture(null, null, new Camera.PictureCallback() {
-                    @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
-                        try {
-                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                            ImageView imageView = findViewById(R.id.iv_picture);
-                            imageView.setImageBitmap(bitmap);
-                            mCamera.startPreview();
-                            Log.d(TAG, "Loaded picture successfully");
-                            mCamera.takePicture(null, null, this);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-        });
     }
 
     @Override
