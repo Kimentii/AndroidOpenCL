@@ -35,14 +35,18 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         mCamera = Camera.open(0);
+
         mCamera.setPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
                 Log.d(TAG, "onPreviewFrame");
-                data = filterImage(data, data.length, 1);
+
                 Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
                 YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21, previewSize.width, previewSize.height, null);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+                data = filterImage(baos.toByteArray(), data.length, 1);
+
                 yuvImage.compressToJpeg(new Rect(0, 0, previewSize.width, previewSize.height), 80, baos);
                 byte[] jdata = baos.toByteArray();
                 Bitmap bitmap = BitmapFactory.decodeByteArray(jdata, 0, jdata.length);

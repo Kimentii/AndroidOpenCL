@@ -2,6 +2,9 @@
 #include <string>
 #include <stdlib.h>
 #include "cl.h"
+#include "cpu_filter.h"
+#include "filter.h"
+#include "ppm.h"
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_kimentii_cameraresearch_MainActivity_getGPUWorkItems(JNIEnv *env, jobject instance) {
@@ -30,11 +33,11 @@ Java_com_kimentii_cameraresearch_MainActivity_filterImage(JNIEnv *env, jobject i
     env->GetByteArrayRegion(image_, 0, width * height, image);*/
 
     int length = env->GetArrayLength(image_);
-    jbyte *buf = env->GetByteArrayElements(image_, false);
+    jbyte *buf = env->GetByteArrayElements(image_, NULL);
 
-    for (int i = 0; i < length; i++) {
-        buf[i] += 100;
-    }
+//    for (int i = 0; i < length; i++) {
+//        buf[i] = 100;
+//    }
 
     /*for (jint i = 0; i < height; i++) {
         for (jint j = 0; j < width; j++) {
@@ -46,7 +49,7 @@ Java_com_kimentii_cameraresearch_MainActivity_filterImage(JNIEnv *env, jobject i
     jbyteArray result = env->NewByteArray(length);
     env->SetByteArrayRegion(result, 0, length, (const jbyte *) buf);
     //delete[] buf;
+    env->ReleaseByteArrayElements(image_, buf, JNI_ABORT);
     return result;
     //return reinterpret_cast<jbyteArray>(image);
-    //env->ReleaseByteArrayElements(image_, image, JNI_ABORT);
 }
