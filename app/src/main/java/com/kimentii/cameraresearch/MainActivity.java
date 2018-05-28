@@ -6,19 +6,15 @@ import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
-import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
@@ -28,6 +24,8 @@ public class MainActivity extends AppCompatActivity {
     SurfaceView mSurfaceView;
 
     public native long getGPUWorkItems();
+
+    public native byte[] filterImage(byte[] image, int width, int height);
 
     static {
         System.loadLibrary("opencl-blur");
@@ -41,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
                 Log.d(TAG, "onPreviewFrame");
+                data = filterImage(data, data.length, 1);
                 Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
                 YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21, previewSize.width, previewSize.height, null);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
