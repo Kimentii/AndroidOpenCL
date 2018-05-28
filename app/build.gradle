@@ -14,17 +14,8 @@ android {
             path "CMakeLists.txt"
         }
     }
-    splits {
-        abi {
-            enable true
-            reset()
-            include 'x86', 'armeabi-v7a', 'mips'
-            universalApk true
-        }
-    }
 }
 
 dependencies {
     implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
 }
