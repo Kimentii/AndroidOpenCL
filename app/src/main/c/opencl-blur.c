@@ -4,72 +4,17 @@
 
 #include "cl.h"
 
-static const char* program_src = ""
-        "#define PIXEL_SIZE\t\t4\n"
-        "#define GROUP_SIZE_X\t\t16\n"
-        "#define GROUP_SIZE_Y\t\t4\n"
-        "#define ROWS_PER_ITEM \t4\n"
-        "#define LOCAL_W \t\t\t\tGROUP_SIZE_X\n"
-        "#define LOCAL_H\t\t\t\t\t(GROUP_SIZE_Y * ROWS_PER_ITEM)\n"
-        "#define GROUP_RESULT_W \t(LOCAL_W - (FILTER_SIZE-1))\n"
-        "#define GROUP_RESULT_H \t(LOCAL_H - (FILTER_SIZE-1))\n"
-        "\n"
-        "__kernel void blur_filter(\n"
-        "\t__global unsigned char* input_image, \n"
-        "\t__global unsigned char* output_image,\n"
-        "\tulong w,\n"
-        "\tulong h,\n"
-        "\t__global float* filter\n"
-        "\t)\n"
-        "{\n"
-        "\tint x = get_local_id(0);\n"
-        "\tint y = get_local_id(1);\n"
-        "\tint gx = get_group_id(0);\n"
-        "\tint gy = get_group_id(1);\n"
-
-        "\n"
-        "\t__local uchar local_work[LOCAL_W * PIXEL_SIZE * LOCAL_H];\n"
-        "\tfor (int i = 0; i < ROWS_PER_ITEM; i++) {\n"
-        "\t\tif ((gy*GROUP_RESULT_H + ROWS_PER_ITEM*y + i) < h) {\n"
-        "\t\t\tuchar4 pixel = vload4((GROUP_RESULT_H*gy + y*ROWS_PER_ITEM + i)*w + GROUP_RESULT_W*gx + x, input_image);\n"
-//        "\t\t\tpixel.s0 = (50*gy)%250;\n"               // b
-//        "\t\t\tpixel.s1 = (pixel.s1 + 30) % 250;\n"     // g
-//        "\t\t\tpixel.s2 = (50*gx)%250;\n"               // r
-//        "\t\t\tpixel.s3 = 250;\n"                       // a
-        "\t\t\tvstore4(pixel, (y*ROWS_PER_ITEM + i)*LOCAL_W + x, local_work);\n"
-        "\t\t}\n"
-        "\t}\n"
-        "\tbarrier(CLK_LOCAL_MEM_FENCE);\n"
-
-        "\t// filtering\n"
-        "\tfor (int i = 0; i < ROWS_PER_ITEM; i++) {\n"
-        "\t\tif ((x < GROUP_RESULT_W) && ((gx*GROUP_RESULT_W + x) < w) && ((gy*GROUP_RESULT_H + y*ROWS_PER_ITEM + i) < h)) {\n"
-        "\t\t\t__private float4 result = (float4)(0);\n"
-        "\t\t\tfor (int n = 0; n < FILTER_SIZE; n++) {\n"
-        "\t\t\t\tfor (int m = 0; m < FILTER_SIZE; m++) {\n"
-        "\t\t\t\t\t__private float filter_value = filter[n*FILTER_SIZE + m];\n"
-        "\t\t\t\t\t__private uchar4 cell_value = vload4((i + y*ROWS_PER_ITEM + n)*LOCAL_W + x + m, local_work);\n"
-        "\t\t\t\t\tresult += convert_float4(cell_value) * filter_value;\n"
-        "\t\t\t\t}\n"
-        "\t\t\t}\n"
-        "\t\t\t__private uchar4 char_result = convert_uchar4(result);\n"
-//        "\t\t\tif (char_result.s2 < 200) char_result.s2 += 50;\n"
-        "\t\t\tchar_result.s2 = (char_result.s2*2) % 250;\n"
-        "\t\t\tvstore4(char_result, (gy*GROUP_RESULT_H + y*ROWS_PER_ITEM + i)*w + gx*GROUP_RESULT_W + x, output_image);\n"
-        "\t\t}\n"
-        "\t}\n"
-        "\t\n"
-        "}";
-
 static size_t filter_size;
 static cl_context context;
 static cl_command_queue queue;
 static cl_kernel kernel;
-static float* filter;
+static float *filter;
 static cl_mem filter_buffer;
 
 JNIEXPORT jint JNICALL
-Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject instance, jint new_filter_size) {
+Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject instance,
+                                                            jint new_filter_size,
+                                                            jstring kernel) {
     // Blur filter initialization
     // For 5-size filter:
     // (1 2 3 2 1)
@@ -77,7 +22,7 @@ Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject
     // (3 4 5 4 3)
     // (2 3 4 3 2)
     // (1 2 3 2 1)
-    filter_size = (size_t)new_filter_size;
+    filter_size = (size_t) new_filter_size;
     filter = (float *) malloc(filter_size * filter_size * sizeof(float));
     float filter_sum = 0;
     for (int i = 0; i < filter_size; i++) {
@@ -126,8 +71,10 @@ Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject
     );
 
     // Compile and save kernel
-    size_t src_size = strlen(program_src);
-    cl_program program = clCreateProgramWithSource(context, 1, &program_src, &src_size, NULL);
+    const char *kernel_str = (*env)->GetStringUTFChars(env, kernel, 0);
+    size_t kernel_str_size = strlen(kernel_str);
+    cl_program program = clCreateProgramWithSource(context, 1, &kernel_str,
+                                                   &kernel_str_size, NULL);
 
     // Set the kernel FILTER_SIZE define
     char filter_size_define[32];
@@ -141,19 +88,19 @@ Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject
 
 JNIEXPORT jintArray JNICALL
 Java_com_kimentii_cameraresearch_BlurFilteringSurface_runFilter(JNIEnv *env, jobject instance,
-                                                                     jintArray in_, jint width,
-                                                                     jint height) {
+                                                                jintArray in_, jint width,
+                                                                jint height) {
     jint *in_bytes = (*env)->GetIntArrayElements(env, in_, 0);
 
     size_t pixel_size = 4;
-    size_t frame_size = filter_size/2;
+    size_t frame_size = filter_size / 2;
 
     // Allocate input image memory on device
     cl_mem input_buffer = clCreateBuffer(
             context,
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             (width * pixel_size * height),
-            (void*)in_bytes,
+            (void *) in_bytes,
             NULL
     );
     // Allocate output image memory on device
@@ -166,13 +113,13 @@ Java_com_kimentii_cameraresearch_BlurFilteringSurface_runFilter(JNIEnv *env, job
     );
 
     // Setting kernel args
-    cl_ulong unsigned_width = (cl_ulong)width;
-    cl_ulong unsigned_height = (cl_ulong)height;
+    cl_ulong unsigned_width = (cl_ulong) width;
+    cl_ulong unsigned_height = (cl_ulong) height;
 
-    clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&input_buffer);
-    clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*)&output_buffer);
-    clSetKernelArg(kernel, 2, sizeof(cl_ulong), (void*)&(unsigned_width));
-    clSetKernelArg(kernel, 3, sizeof(cl_ulong), (void*)&unsigned_height);
+    clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &input_buffer);
+    clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &output_buffer);
+    clSetKernelArg(kernel, 2, sizeof(cl_ulong), (void *) &(unsigned_width));
+    clSetKernelArg(kernel, 3, sizeof(cl_ulong), (void *) &unsigned_height);
     clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *) &filter_buffer);
 
     // Calculating work size
@@ -193,15 +140,15 @@ Java_com_kimentii_cameraresearch_BlurFilteringSurface_runFilter(JNIEnv *env, job
     size_t group_x_pixels = group_x_size - (filter_size - 1);
     size_t group_y_size = 4;
     size_t y_pixels_by_work_group = 4;
-    size_t group_y_pixels = group_y_size*y_pixels_by_work_group - (filter_size - 1);
+    size_t group_y_pixels = group_y_size * y_pixels_by_work_group - (filter_size - 1);
 
-    size_t groups_x = width/group_x_pixels;
+    size_t groups_x = width / group_x_pixels;
     if (width % group_x_pixels != 0) groups_x++;
 
-    size_t groups_y = height/group_y_pixels;
+    size_t groups_y = height / group_y_pixels;
     if (height % group_y_pixels != 0) groups_y++;
 
-    const size_t work_size[2] = {group_x_size*groups_x, group_y_size*groups_y};
+    const size_t work_size[2] = {group_x_size * groups_x, group_y_size * groups_y};
     const size_t group_size[2] = {group_x_size, group_y_size};
 
     // Enqueue kernel execution
@@ -230,7 +177,7 @@ Java_com_kimentii_cameraresearch_BlurFilteringSurface_runFilter(JNIEnv *env, job
             CL_TRUE,
             0,
             width * pixel_size * height,
-            (void*)result,
+            (void *) result,
             0,
             NULL,
             NULL

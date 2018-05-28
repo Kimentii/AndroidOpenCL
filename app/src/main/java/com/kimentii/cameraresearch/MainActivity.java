@@ -7,6 +7,8 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import java.io.BufferedInputStream;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private BlurFilteringSurface blurFilteringSurface;
@@ -15,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
     // bit lazy, sorry.
     public static final int FILTER_SIZE = 7;
 
-    native private int compileKernel(int filter_size);
+    native private int compileKernel(int filter_size, String kernel);
 
     static {
         System.loadLibrary("opencl-blur");
@@ -26,7 +28,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        int compilationResult = compileKernel(FILTER_SIZE);
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(getResources().openRawResource(R.raw.kernel));
+        String kernelStr = new String();
+        byte[] contents = new byte[1024];
+        int bytesRead = 0;
+        try {
+            while ((bytesRead = bufferedInputStream.read(contents)) != -1) {
+                kernelStr += new String(contents, 0, bytesRead);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        int compilationResult = compileKernel(FILTER_SIZE, kernelStr);
         Log.d(TAG, "Compilation result: " + compilationResult);
         if (compilationResult == 0) {
             blurFilteringSurface = new BlurFilteringSurface(this);
@@ -40,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
         boolean filtering = !blurFilteringSurface.isFiltering();
         blurFilteringSurface.setFiltering(filtering);
         if (filtering) {
-            ((TextView)button).setText("Stop filtering");
+            ((TextView) button).setText("Stop filtering");
         } else {
-            ((TextView)button).setText("Start filtering");
+            ((TextView) button).setText("Start filtering");
         }
     }
 
@@ -50,9 +64,9 @@ public class MainActivity extends AppCompatActivity {
         boolean focused = !blurFilteringSurface.isFocus();
         blurFilteringSurface.setFocus(focused);
         if (focused) {
-            ((TextView)button).setText("No focus");
+            ((TextView) button).setText("No focus");
         } else {
-            ((TextView)button).setText("Focus");
+            ((TextView) button).setText("Focus");
         }
     }
 }
