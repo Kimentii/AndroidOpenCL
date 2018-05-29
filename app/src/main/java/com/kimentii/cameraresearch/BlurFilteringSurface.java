@@ -8,10 +8,9 @@ import android.hardware.Camera;
 import android.util.Log;
 import android.view.SurfaceView;
 
-import static com.kimentii.cameraresearch.MainActivity.FILTER_SIZE;
 
 /**
- * Gets images from camera, converts it
+ * Gets images from camera and filters it via OpenCL
  * <ol>
  *    <li>Gets image from camera</li>
  *    <li>Converts it to one-plane ARGB format</li>
@@ -45,7 +44,7 @@ public class BlurFilteringSurface extends SurfaceView implements Camera.PreviewC
         super(context);
 
         // Sets the Canvas size
-        getHolder().setFixedSize(IMG_HEIGHT - (FILTER_SIZE - 1), IMG_WIDTH - (FILTER_SIZE - 1));
+        getHolder().setFixedSize(IMG_HEIGHT, IMG_WIDTH);
 
         // Necessary for {#link onDraw} method to be called
         setWillNotDraw(false);

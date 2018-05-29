@@ -8,6 +8,10 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -15,7 +19,8 @@ public class MainActivity extends AppCompatActivity {
     // It's easy to adjust blur filter size, just change the constant here
     // Also we can make runtime-selectable filter size, but we are a little
     // bit lazy, sorry.
-    public static final int FILTER_SIZE = 7;
+    public static final int FILTER_SIZE = 5;
+    public static final String KERNEL_FILE = "kernel.cl";
 
     native private int compileKernel(int filter_size, String kernel);
 
@@ -28,27 +33,31 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(getResources().openRawResource(R.raw.kernel));
-        String kernelStr = new String();
-        byte[] contents = new byte[1024];
-        int bytesRead = 0;
-        try {
-            while ((bytesRead = bufferedInputStream.read(contents)) != -1) {
-                kernelStr += new String(contents, 0, bytesRead);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
-        int compilationResult = compileKernel(FILTER_SIZE, kernelStr);
-        Log.d(TAG, "Compilation result: " + compilationResult);
-        if (compilationResult == 0) {
-            blurFilteringSurface = new BlurFilteringSurface(this);
-            FrameLayout preview = findViewById(R.id.camera_preview);
-            preview.addView(blurFilteringSurface);
+        try {
+            BufferedReader kernelReader = new BufferedReader(
+                    new InputStreamReader(getAssets().open(KERNEL_FILE))
+            );
+            StringBuilder kernelSrc = new StringBuilder();
+            String srcLine = kernelReader.readLine();
+            while (srcLine != null) {
+                kernelSrc.append(srcLine);
+                kernelSrc.append("\n");
+                srcLine = kernelReader.readLine();
+            }
+
+            int compilationResult = compileKernel(FILTER_SIZE, kernelSrc.toString());
+            Log.d(TAG, kernelSrc.toString());
+            Log.d(TAG, "Compilation result: " + compilationResult);
+            if (compilationResult == 0) {
+                blurFilteringSurface = new BlurFilteringSurface(this);
+                FrameLayout preview = findViewById(R.id.camera_preview);
+                preview.addView(blurFilteringSurface);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Exception during reading cl program", e);
         }
     }
-
 
     public void applyFilterBtnClicked(View button) {
         boolean filtering = !blurFilteringSurface.isFiltering();

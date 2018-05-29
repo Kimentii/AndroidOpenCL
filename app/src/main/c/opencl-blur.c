@@ -14,7 +14,7 @@ static cl_mem filter_buffer;
 JNIEXPORT jint JNICALL
 Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject instance,
                                                             jint new_filter_size,
-                                                            jstring kernel) {
+                                                            jstring kernel_src) {
     // Blur filter initialization
     // For 5-size filter:
     // (1 2 3 2 1)
@@ -71,10 +71,9 @@ Java_com_kimentii_cameraresearch_MainActivity_compileKernel(JNIEnv *env, jobject
     );
 
     // Compile and save kernel
-    const char *kernel_str = (*env)->GetStringUTFChars(env, kernel, 0);
+    const char *kernel_str = (*env)->GetStringUTFChars(env, kernel_src, 0);
     size_t kernel_str_size = strlen(kernel_str);
-    cl_program program = clCreateProgramWithSource(context, 1, &kernel_str,
-                                                   &kernel_str_size, NULL);
+    cl_program program = clCreateProgramWithSource(context, 1, &kernel_str, &kernel_str_size, NULL);
 
     // Set the kernel FILTER_SIZE define
     char filter_size_define[32];
