@@ -14,6 +14,14 @@ android {
             path "CMakeLists.txt"
         }
     }
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'x86', 'armeabi-v7a', 'mips'
+            universalApk true
+        }
+    }
 }
 
 dependencies {
